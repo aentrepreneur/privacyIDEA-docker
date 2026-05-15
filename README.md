@@ -1,4 +1,4 @@
-# [2026] - Despliegue Docker de privacyIDEA-docker
+# [2026] - Despliegue de privacyIDEA-Docker
 **Despliegue dockerizado de privacyIDEA con MySQL, Redis, Apache, FreeRADIUS y OpenLDAP**
 
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
