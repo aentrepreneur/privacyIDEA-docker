@@ -1,4 +1,4 @@
-# [PI-docker 2026] - Despliegue Docker de privacyIDEA-docker
+# [2026] - Despliegue Docker de privacyIDEA-docker
 **Despliegue dockerizado de privacyIDEA con MySQL, Redis, Apache, FreeRADIUS y OpenLDAP**
 
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
@@ -61,8 +61,6 @@ Este proyecto orquesta todos los servicios necesarios para un despliegue complet
 - **Persistencia de datos** mediante volúmenes Docker
 
 ---
-
-
 
 ## Arquitectura del Sistema
 
