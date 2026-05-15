@@ -1,0 +1,16 @@
+dn: ${LDAP_BASE_DN}
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: ${LDAP_ORGANISATION}
+dc: ${LDAP_BASE_DC}
+
+dn: ou=people,${LDAP_BASE_DN}
+objectClass: top
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,${LDAP_BASE_DN}
+objectClass: top
+objectClass: organizationalUnit
+ou: groups

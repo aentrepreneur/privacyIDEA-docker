@@ -1,0 +1,106 @@
+# sites-enabled/twofa - Configuración RADIUS para autenticación con privacyIDEA
+# Este archivo maneja las peticiones RADIUS y las delega al módulo Perl
+#
+# Para producción: ajustar el dominio/servicio según corresponda
+
+server twofa {
+
+    # Puerto de escucha para autenticación
+    listen {
+        type = auth
+        ipaddr = *
+        port = 1812
+    }
+
+    # Puerto de escucha para accounting
+    listen {
+        type = acct
+        ipaddr = *
+        port = 1813
+    }
+
+    # Autorización: preparar la petición antes de autenticar
+    authorize {
+        # Preprocesar la petición
+        preprocess
+        
+        # Manejo de suffix (dominio)
+        suffix
+        
+        # Módulos EAP
+        eap {
+            ok = return
+        }
+        
+        # Archivos locales de usuarios
+        files
+        
+        # Expiración de tokens
+        expiration
+        
+        # Tiempo de sesión
+        logintime
+        
+        # Establecer tipo de autenticación
+        update control {
+            Auth-Type := Perl
+        }
+    }
+
+    # Autenticación real
+    authenticate {
+        # Autenticación PAP (password en texto)
+        Auth-Type PAP {
+            pap
+        }
+        
+        # Autenticación via Perl (privacyIDEA)
+        Auth-Type Perl {
+            perl
+        }
+    }
+
+    # Pre-contabilización
+    preacct {
+        preprocess
+        acct_unique
+        suffix
+        files
+    }
+
+    # Contabilización
+    accounting {
+        detail
+        unix
+        radutmp
+        exec
+        attr_filter.accounting_response
+    }
+
+    # Sesión
+    session {
+        radutmp
+    }
+
+    # Post-autenticación
+    post-auth {
+        update reply {
+            Session-Timeout := 3600
+        }
+        
+        # Limpiar estado
+        remove_reply_message_if_eap
+        
+        # Respuesta al cliente
+        Auth-Type := Accept
+    }
+
+    # Pre-proxy
+    pre-proxy {
+    }
+
+    # Post-proxy
+    post-proxy {
+        eap
+    }
+}

@@ -1,0 +1,16 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+*.md
+logs/
+*.log
+*.tgz
+*.zip
+.DS_Store
+backups/
+config/apache/certs/

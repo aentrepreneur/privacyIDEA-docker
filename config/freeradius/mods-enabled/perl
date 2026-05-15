@@ -1,0 +1,12 @@
+# mods-enabled/perl — Configuración del módulo rlm_perl
+# Apunta al plugin oficial de privacyIDEA descargado en el Ubuntu
+perl {
+    # Path al .pm oficial descargado en build-time
+    filename = /usr/share/privacyidea/freeradius/privacyidea_radius.pm
+
+    # Pasar el path del .ini al módulo Perl via RAD_PERLCONF
+    # El plugin busca: /etc/privacyidea/rlm_perl.ini (primera prioridad)
+    config {
+        configfile = /etc/privacyidea/rlm_perl.ini
+    }
+}

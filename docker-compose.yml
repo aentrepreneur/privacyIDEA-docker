@@ -1,0 +1,279 @@
+# Development By AEntrepreneur [PI-docker 2026]
+# =================================================================
+# Orquestacion de Servicios privacyIDEA-docker
+# =================================================================
+# Servicios: mysql, privacyidea, redis, openldap, apache, freeradius
+# Redes: internal_net (aislada), docker_net (bridge)
+# Persistencia: mysql_data, pi_data, pi_custom
+# Healthchecks en todos los servicios
+# =================================================================
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "20m"
+    max-file: "3"
+
+services:
+  mysql:
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    build:
+      context: ./config/mysql
+      dockerfile: mysql_${MYSQL_VERSION}.dockerfile
+      args:
+        - MYSQL_VERSION=${MYSQL_VERSION}
+    image: dg/mysql:${MYSQL_VERSION}
+    hostname: mysql
+    container_name: mysql
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - internal_net    # AISLADA
+    ports: 
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '${MYSQL_CPU:-0.80}'
+          memory: ${MYSQL_MEMORY:-1200M}
+    logging: *default-logging
+
+  privacyidea:
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    build:
+      context: ./config/privacyidea
+      dockerfile: privacyidea_${PI_VERSION}.dockerfile
+      args:
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+        - PYTHON_VERSION=${PYTHON_VERSION}
+        - PI_VERSION=${PI_VERSION}
+    image: dg/privacyidea:${PI_VERSION}
+    hostname: privacyidea
+    container_name: privacyidea
+    volumes:
+      - ./config/privacyidea/pi.cfg:/opt/privacyidea/etc/pi.cfg
+      - ./config/privacyidea/logging.cfg:/opt/privacyidea/etc/logging.cfg
+      - pi_data:/opt/privacyidea/data
+      - pi_custom:/opt/privacyidea/venv/lib/
+    networks:
+      - internal_net   # Habla con MySQL
+      - docker_net     # Habla con Apache
+    environment:
+      PI_ADMIN_USER: ${PI_ADMIN_USER}
+      PI_ADMIN_PASSWORD: ${PI_ADMIN_PASSWORD}
+      PI_DB_URI: "mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql/${MYSQL_DATABASE}"
+      REDIS_URI: "redis://:${REDIS_PASSWORD}@redis:6379/0"
+      PRIVACYIDEA_CONFIGFILE: "/opt/privacyidea/etc/pi.cfg"
+      PI_GPG_HOME: "/opt/privacyidea/data/gpg"
+      PI_VERSION: ${PI_VERSION}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS}
+      PI_SECRET_KEY: ${PI_SECRET_KEY}
+      PI_PEPPER: ${PI_PEPPER}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          cpus: '${PI_CPU:-0.70}'
+          memory: ${PI_MEMORY:-800M}
+    logging: *default-logging
+
+  redis:
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    build:
+      context: ./config/redis
+      dockerfile: redis.dockerfile
+      args:
+        - REDIS_VERSION=${REDIS_VERSION}
+    image: dg/redis:${REDIS_VERSION}
+    hostname: redis
+    container_name: redis
+    volumes:
+      - ./config/redis/data:/data
+    networks:
+      - internal_net
+    ports:
+      - 6379:6379
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '${REDIS_CPU:-0.20}'
+          memory: ${REDIS_MEMORY:-256M}
+    logging: *default-logging
+
+  openldap:
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    build:
+      context: ./config/openldap
+      dockerfile: openldap.dockerfile
+      args:
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    image: dg/openldap:${LDAP_VERSION}
+    hostname: openldap
+    container_name: openldap
+    volumes:
+      - ./config/openldap/data:/var/lib/ldap
+      - ./config/openldap/config/slapd.conf:/etc/ldap/slapd.conf:ro
+      - ./config/openldap/custom:/opt/bootstrap/ldif:ro
+      - ./config/openldap/certs:/opt/bootstrap/certs:ro
+    networks:
+      - internal_net
+    ports:
+      - 389:389
+      - 636:636
+    environment:
+      - LDAP_ORGANISATION=${LDAP_ORGANISATION}
+      - LDAP_DOMAIN=${LDAP_DOMAIN}
+      - LDAP_BASE_DN=${LDAP_BASE_DN}
+      - LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD}
+      - LDAP_CONFIG_PASSWORD=${LDAP_CONFIG_PASSWORD}
+      - LDAP_TLS_COMMON_NAME=${LDAP_TLS_COMMON_NAME}
+      - LDAP_TLS_COUNTRY=${LDAP_TLS_COUNTRY}
+      - LDAP_TLS_STATE=${LDAP_TLS_STATE}
+      - LDAP_TLS_LOCALITY=${LDAP_TLS_LOCALITY}
+      - LDAP_TLS_ORG=${LDAP_TLS_ORG}
+      - LDAP_TLS_OU=${LDAP_TLS_OU}
+    healthcheck:
+      test: ["CMD", "ldapwhoami", "-x", "-H", "ldap://localhost"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '${OPENLDAP_CPU:-0.40}'
+          memory: ${OPENLDAP_MEMORY:-512M}
+    logging: *default-logging
+
+  apache:
+    depends_on:
+      privacyidea:
+        condition: service_healthy
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    build:
+      context: ./config/apache
+      dockerfile: apache.dockerfile
+      args:
+        - APACHE_VERSION=${APACHE_VERSION}
+    image: dg/apache:${APACHE_VERSION}
+    hostname: apache
+    container_name: apache
+    volumes:
+      - ./config/apache/httpd.conf:/usr/local/apache2/conf/httpd.conf
+      - ./config/apache/httpd-ssl.conf:/usr/local/apache2/conf/extra/httpd-ssl.conf
+      - ./config/apache/certs/:/usr/local/apache2/certs
+    networks:
+      - docker_net
+    ports: 
+      - ${HTTPS_PORT}:443
+    deploy:
+      resources:
+        limits:
+          cpus: '${APACHE_CPU:-0.50}'
+          memory: ${APACHE_MEMORY:-400M}
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-f", "https://localhost/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *default-logging
+
+  freeradius:
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    build:
+      context: ./config/freeradius
+      dockerfile: freeradius.dockerfile
+      args:
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    image: dg/freeradius:${FREERADIUS_VERSION}
+    hostname: freeradius
+    container_name: freeradius
+    networks:
+      - internal_net
+      - docker_net
+    ports:
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+    environment:
+      - RADIUS_SECRET=${RADIUS_SECRET}
+    volumes:
+      - ./config/freeradius/clients.conf:/etc/freeradius/3.0/clients.conf
+      - ./config/freeradius/rlm_perl.ini:/etc/privacyidea/rlm_perl.ini
+      - ./config/freeradius/mods-enabled/perl:/etc/freeradius/3.0/mods-enabled/perl
+      # - ./config/freeradius/mods-enabled/ldap:/etc/freeradius/3.0/mods-available/ldap
+      - ./config/freeradius/sites-enabled/default:/etc/freeradius/3.0/sites-enabled/default
+      # - ./config/freeradius/sites-enabled/twofa:/etc/freeradius/3.0/sites-enabled/twofa
+    depends_on:
+      privacyidea:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '${FREERADIUS_CPU:-0.40}'
+          memory: ${FREERADIUS_MEMORY:-256M}
+    logging: *default-logging
+
+  # cronjobs:
+  #   image: docker:cli
+  #   container_name: cronjobs
+  #   restart: unless-stopped
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock # Permitir Comunicación con Daemon Docker Host
+  #   # Bucle Infinito: Ejecuta 'pi-manage sync' cada hora (3600s)
+  #   command: /bin/sh -c "while true; do docker exec pi_core pi-manage sync; sleep 3600; done"
+  #   depends_on:
+  #     - privacyidea
+  #   logging: *default-logging
+
+volumes:
+  mysql_data:
+    name: mysql_data
+  pi_data:
+    name: pi_data
+  pi_custom:
+    name: pi_custom
+
+networks:
+  internal_net:
+    name: internal_net
+    internal: true     # Hardening: MySQL aislada
+  docker_net:
+    name: docker_net
+    driver: bridge
+
+#End Development By AEntrepreneur [PI-docker 2026]

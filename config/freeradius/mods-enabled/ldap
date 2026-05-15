@@ -1,0 +1,63 @@
+# mods-enabled/ldap - Configuración de LDAP/AD para FreeRADIUS
+#
+# Este archivo conecta FreeRADIUS con un directorio LDAP/AD existente
+# Para producción: ajustar los valores de servidor, puerto, base DN y credenciales
+#
+# Ejemplo de configuración genérica - reemplazar valores con los de producción
+
+ldap {
+    # Servidor LDAP/AD
+    server = "ldap://openldap"
+    port = 389
+    identity = "cn=admin,dc=example,dc=com"
+    password = "ldap_admin_password"
+    
+    # Base DN para búsquedas de usuarios
+    base_dn = "dc=example,dc=com"
+    
+    # Filter para buscar usuarios
+    # Ejemplo: buscar por sAMAccountName (AD) o uid (LDAP)
+    filter = "(sAMAccountName=%{Stripped-User-Name})"
+    # filter = "(uid=%{Stripped-User-Name})"
+    
+    # Base para grupos (si aplica)
+    group {
+        base_dn = "dc=example,dc=com"
+        filter = "(objectClass=posixGroup)"
+        membership_attribute = "member"
+    }
+    
+    # Atributos a obtener del directorio
+    ldap_connections_number = 5
+    
+    # Timeouts
+    timeout = 10
+    timelimit = 3
+    net_timeout = 5
+    
+    # TLS/SSL
+    # tls {
+    #     start_tls = no
+    #     require_cert = "allow"
+    # }
+    
+    # Mapping de atributos RADIUS
+    # Map atributos del directorio a atributos RADIUS
+    # update {
+    #     reply:Attribute-Name = "ldap:attribute-name"
+    # }
+    
+    # Referrals
+    do_normalizeize = yes
+    
+    # Charset
+    chase_referrals = yes
+    
+    # Rebind
+    rebind = yes
+}
+
+# Para activar este módulo en producción:
+# 1. Descomentar y ajustar valores arriba
+# 2. En sites-enabled/, crear enlace o copiar este archivo
+# 3. Ejecutar: ln -s ../mods-available/ldap mods-enabled/ldap
