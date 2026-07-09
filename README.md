@@ -1,35 +1,48 @@
-# privacyIDEA-docker
+<div align="center">
 
-Despliegue containerizado de [privacyIDEA](https://github.com/privacyidea/privacyidea) con Docker Compose: servidor OTP con PostgreSQL, configurado para autenticacion de dos factores (2FA/TOTP) en entornos corporativos.
+# PrivacyIDEA Docker
 
-## Caracteristicas
+Containerized MFA OTP server for corporate environments
 
-- Servidor privacyIDEA via Apache+mod_wsgi
-- PostgreSQL 14 como backend persistente
-- Variables de entorno para configuracion sensible
-- Seed automatico de admin y realm por defecto
-- Healthcheck contra `/auth` endpoint
-- Logs de aplicacion persistentes en volumen
+![Status](https://img.shields.io/badge/status-Stable-28a745?style=flat-square)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-27.0+-2496ED?style=flat-square&logo=docker)](https://docker.com)
+![Updated](https://img.shields.io/github/last-commit/aentrepreneur/privacyIDEA-docker?style=flat-square)
 
-## Requisitos
+</div>
+
+## Overview
+
+Production-ready Docker Compose deployment of [privacyIDEA](https://github.com/privacyidea/privacyidea) OTP server with PostgreSQL backend, Apache+mod_wsgi, and automated admin seeding for TOTP-based two-factor authentication (2FA).
+
+## Features
+
+- privacyIDEA server via Apache + mod_wsgi
+- PostgreSQL 14 as persistent backend
+- Environment variables for sensitive configuration
+- Automated admin and realm seeding at startup
+- Healthcheck against `/auth` endpoint
+- Persistent application logs via volumes
+
+## Requirements
 
 - Docker + Docker Compose v2
-- Puerto 8080 disponible (host)
+- Port 8080 available on host
 
-## Uso rapido
+## Quick Start
 
 ```bash
 git clone https://github.com/aentrepreneur/privacyIDEA-docker.git
 cd privacyIDEA-docker
-cp .env.example .env   # editar variables
+cp .env.example .env   # edit variables
 docker compose up -d
 ```
 
-Acceder a `http://localhost:8080` e iniciar sesion con el admin definido en `.env`.
+Access `http://localhost:8080` and log in with the admin defined in `.env`.
 
-## Estructura
+## Structure
 
-```
+```text
 privacyIDEA-docker/
 ├── docker-compose.yml
 ├── .env.example
@@ -40,6 +53,14 @@ privacyIDEA-docker/
     └── DEPLOYMENT.md
 ```
 
-## Documentacion
+## Documentation
 
-- [DEPLOYMENT.md](docs/DEPLOYMENT.md) — guia de instalacion, variables y troubleshooting
+- `docs/DEPLOYMENT.md` — installation guide, environment variables, troubleshooting
+
+## License
+
+MIT — see [LICENSE](LICENSE)
+
+## Author
+
+Angel Esquivel — [@aentrepreneur](https://github.com/aentrepreneur)
